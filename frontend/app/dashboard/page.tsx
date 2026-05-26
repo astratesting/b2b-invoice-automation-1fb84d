@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   FileText,
   Clock,
@@ -29,6 +30,65 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useSupabaseWithAuth } from "@/lib/auth";
+
+type Invoice = {
+  id: string;
+  vendor: string;
+  amount: string;
+  date: string;
+  status: string;
+  confidence: number;
+  category: string;
+};
+
+const staticInvoices: Invoice[] = [
+  {
+    id: "INV-2024-4821",
+    vendor: "Salesforce Inc.",
+    amount: "$42,800.00",
+    date: "May 25, 2026",
+    status: "approved",
+    confidence: 99,
+    category: "Software & SaaS",
+  },
+  {
+    id: "INV-2024-4820",
+    vendor: "AWS / Amazon",
+    amount: "$18,340.00",
+    date: "May 25, 2026",
+    status: "processing",
+    confidence: 97,
+    category: "Cloud Infrastructure",
+  },
+  {
+    id: "INV-2024-4819",
+    vendor: "McKinsey & Co.",
+    amount: "$95,000.00",
+    date: "May 24, 2026",
+    status: "pending",
+    confidence: 94,
+    category: "Professional Services",
+  },
+  {
+    id: "INV-2024-4818",
+    vendor: "WeWork Global",
+    amount: "$28,500.00",
+    date: "May 24, 2026",
+    status: "approved",
+    confidence: 100,
+    category: "Office & Facilities",
+  },
+  {
+    id: "INV-2024-4817",
+    vendor: "HubSpot Inc.",
+    amount: "$7,200.00",
+    date: "May 23, 2026",
+    status: "exception",
+    confidence: 71,
+    category: "Marketing",
+  },
+];
 
 const kpis = [
   {
@@ -92,54 +152,6 @@ const pieData = [
   { name: "Exceptions", value: 8, color: "#ef4444" },
 ];
 
-const recentInvoices = [
-  {
-    id: "INV-2024-4821",
-    vendor: "Salesforce Inc.",
-    amount: "$42,800.00",
-    date: "May 25, 2026",
-    status: "approved",
-    confidence: 99,
-    category: "Software & SaaS",
-  },
-  {
-    id: "INV-2024-4820",
-    vendor: "AWS / Amazon",
-    amount: "$18,340.00",
-    date: "May 25, 2026",
-    status: "processing",
-    confidence: 97,
-    category: "Cloud Infrastructure",
-  },
-  {
-    id: "INV-2024-4819",
-    vendor: "McKinsey & Co.",
-    amount: "$95,000.00",
-    date: "May 24, 2026",
-    status: "pending",
-    confidence: 94,
-    category: "Professional Services",
-  },
-  {
-    id: "INV-2024-4818",
-    vendor: "WeWork Global",
-    amount: "$28,500.00",
-    date: "May 24, 2026",
-    status: "approved",
-    confidence: 100,
-    category: "Office & Facilities",
-  },
-  {
-    id: "INV-2024-4817",
-    vendor: "HubSpot Inc.",
-    amount: "$7,200.00",
-    date: "May 23, 2026",
-    status: "exception",
-    confidence: 71,
-    category: "Marketing",
-  },
-];
-
 const statusConfig: Record<
   string,
   { label: string; className: string }
@@ -170,6 +182,26 @@ const colorMap: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const { getClient } = useSupabaseWithAuth();
+  const [recentInvoices, setRecentInvoices] = useState<Invoice[]>(staticInvoices);
+
+  useEffect(() => {
+    getClient()
+      .then((client) =>
+        client
+          .from("invoices")
+          .select("id, vendor, amount, date, status, confidence, category")
+          .order("date", { ascending: false })
+          .limit(5)
+      )
+      .then(({ data }) => {
+        if (data && data.length > 0) setRecentInvoices(data as Invoice[]);
+      })
+      .catch(() => {
+        // Supabase not configured yet — static data stays
+      });
+  }, [getClient]);
+
   return (
     <div className="p-6 space-y-6">
       {/* Page header */}
